@@ -9,11 +9,17 @@ export function SearchBar({
   onSubmit,
   size = "lg",
   initial = "",
+  hero = false,
+  onListening,
+  onDraft,
 }: {
   autoFocus?: boolean;
   onSubmit: (q: string) => void;
   size?: "lg" | "sm";
   initial?: string;
+  hero?: boolean;
+  onListening?: (v: boolean) => void;
+  onDraft?: (v: string) => void;
 }) {
   const [value, setValue] = useState(initial);
   const [open, setOpen] = useState(false);
@@ -70,7 +76,7 @@ export function SearchBar({
     <div className="relative w-full">
       <div
         className={`glass flex items-center gap-3 ${
-          lg ? "h-[64px] rounded-[22px] px-4 md:h-[70px] md:px-5" : "h-11 rounded-[16px] px-3"
+          lg ? "h-[64px] rounded-[28px] px-4 md:h-[76px] md:px-6" : "h-11 rounded-[16px] px-3"
         }`}
       >
         <Search className="shrink-0 text-mute" size={lg ? 20 : 16} />
@@ -82,14 +88,19 @@ export function SearchBar({
           onChange={(e) => {
             setValue(e.target.value);
             setOpen(true);
+            onDraft?.(e.target.value);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            onListening?.(true);
+          }}
           onBlur={() => {
             window.setTimeout(() => setOpen(false), 140);
+            onListening?.(false);
           }}
           onKeyDown={onKey}
-          placeholder="Что найти? Например: Honor Magic 7 Pro"
-          className={`w-full bg-transparent outline-none placeholder:text-mute ${lg ? "text-[16px] md:text-[17px]" : "text-[13px]"}`}
+          placeholder={hero ? "Что найти?" : "Что найти? Например: Honor Magic 7 Pro"}
+          className={`w-full bg-transparent outline-none placeholder:text-mute ${lg ? "text-[16px] md:text-[18px]" : "text-[13px]"}`}
           role="combobox"
           aria-expanded={open && items.length > 0}
           aria-controls={listId}

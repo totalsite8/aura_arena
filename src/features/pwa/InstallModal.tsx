@@ -1,6 +1,6 @@
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { Button, Modal } from "@/components/ui";
-import { AuraOrb } from "@/components/aura/AuraOrb";
+import { AuraBeing } from "@/components/aura/AuraBeing";
 
 export function InstallModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { canPrompt, installed, isIos, isMobile, promptInstall } = usePwaInstall();
@@ -8,7 +8,7 @@ export function InstallModal({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <Modal open={open} onClose={onClose}>
       <div className="flex flex-col items-center text-center">
-        <AuraOrb size={88} />
+        <AuraBeing size={96} />
         <h2 className="font-display mt-2 text-[26px]">Aura всегда под рукой</h2>
         <p className="mt-1 max-w-[34ch] text-[14px] text-mute">
           {installed
