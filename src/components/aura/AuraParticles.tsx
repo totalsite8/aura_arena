@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import * as THREE from "three";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const PHRASES = [
@@ -9,23 +10,21 @@ const PHRASES = [
   "как найти лучшее?",
 ];
 
-type P = {
+type Dot = {
   x: number;
   y: number;
   vx: number;
   vy: number;
   hx: number;
   hy: number;
-  gx: number;
-  gy: number;
-  r: number;
-  seed: number;
+  tx: number;
+  ty: number;
   glyph: boolean;
 };
 
 function samplePhrase(text: string, width: number, height: number): { x: number; y: number }[] {
-  const w = Math.max(360, Math.floor(width));
-  const h = Math.max(200, Math.floor(height * 0.7));
+  const w = Math.max(480, Math.floor(width));
+  const h = Math.max(220, Math.floor(height * 0.82));
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -33,32 +32,32 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   if (!ctx) return [];
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#fff";
+  ctx.strokeStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
 
-  let font = Math.min(w * 0.15, h * 0.32, 128);
-  const family = '"Manrope", system-ui, sans-serif';
+  const family = '"Syne", "Manrope", system-ui, sans-serif';
+  let font = Math.min(w * 0.18, h * 0.42, 160);
   const layout = (size: number) => {
     ctx.font = `800 ${size}px ${family}`;
     const words = text.split(" ");
-    if (ctx.measureText(text).width <= w * 0.9 || words.length === 1) return [text];
+    if (ctx.measureText(text).width <= w * 0.92 || words.length === 1) return [text];
     const mid = Math.ceil(words.length / 2);
     return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
   };
 
   let lines = layout(font);
-  while (font > 30) {
+  while (font > 36) {
     ctx.font = `800 ${font}px ${family}`;
-    const tooWide = lines.some((ln) => ctx.measureText(ln).width > w * 0.92);
-    if (!tooWide) break;
-    font -= 3;
+    if (!lines.some((ln) => ctx.measureText(ln).width > w * 0.94)) break;
+    font -= 2;
     lines = layout(font);
   }
   ctx.font = `800 ${font}px ${family}`;
-  ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(6, font * 0.12);
-  ctx.strokeStyle = "#fff";
-  const lh = font * 1.12;
+  ctx.lineWidth = Math.max(10, font * 0.16);
+  const lh = font * 1.05;
   const top = h / 2 - ((lines.length - 1) * lh) / 2;
   lines.forEach((ln, i) => {
     const yy = top + i * lh;
@@ -67,63 +66,37 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   });
 
   const data = ctx.getImageData(0, 0, w, h).data;
-  const cx = w / 2;
-  const cy = h / 2;
   const pts: { x: number; y: number }[] = [];
-
-  for (let y = 0; y < h; y += 1) {
-    for (let x = 0; x < w; x += 1) {
-      if ((data[(y * w + x) * 4 + 3] ?? 0) < 50) continue;
-      const nx = (x - cx) / (w * 0.5);
-      const ny = (y - cy) / (h * 0.5);
-      const dist = Math.min(1, Math.sqrt(nx * nx + ny * ny));
-      const keep = 0.72 + 0.28 * (1 - dist) ** 1.2;
-      const copies = dist < 0.22 ? 3 : dist < 0.4 ? 2 : 1;
-      for (let k = 0; k < copies; k++) {
-        if (Math.random() > keep) continue;
-        const j = 0.7 + dist * 0.6;
-        pts.push({
-          x: (x / w) * width + (Math.random() - 0.5) * j,
-          y: (y / h) * height * 0.78 + height * 0.1 + (Math.random() - 0.5) * j,
-        });
-      }
+  const step = w > 1100 ? 1 : 1;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      if ((data[(y * w + x) * 4 + 3] ?? 0) < 40) continue;
+      pts.push({
+        x: (x / w - 0.5) * width * 0.92,
+        y: -(y / h - 0.5) * height * 0.7,
+      });
     }
   }
   return pts;
 }
 
-function scatterHomes(n: number, w: number, h: number): { x: number; y: number }[] {
-  const out = [];
-  const padX = 8;
-  const padY = 8;
-  for (let i = 0; i < n; i++) {
-    if (Math.random() < 0.38) {
-      const u = Math.random();
-      const v = Math.random();
-      const a = Math.PI * 2 * u;
-      const r = Math.sqrt(v) * 0.42;
-      out.push({
-        x: w * (0.5 + Math.cos(a) * r * (w / Math.max(w, h))),
-        y: h * (0.48 + Math.sin(a) * r * 0.85),
-      });
-    } else {
-      out.push({
-        x: padX + Math.random() * Math.max(1, w - padX * 2),
-        y: padY + Math.random() * Math.max(1, h - padY * 2),
-      });
-    }
+function palette(dark: boolean): [number, number, number][] {
+  if (dark) {
+    return [
+      [0.96, 0.89, 0.74],
+      [0.91, 0.79, 0.55],
+      [0.83, 0.64, 0.36],
+      [0.98, 0.95, 0.88],
+      [0.76, 0.42, 0.22],
+    ];
   }
-  return out;
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const a = arr[i]!;
-    arr[i] = arr[j]!;
-    arr[j] = a;
-  }
-  return arr;
+  return [
+    [0.12, 0.1, 0.08],
+    [0.22, 0.18, 0.14],
+    [0.45, 0.28, 0.12],
+    [0.35, 0.42, 0.18],
+    [0.55, 0.22, 0.12],
+  ];
 }
 
 export function AuraParticles({
@@ -135,175 +108,241 @@ export function AuraParticles({
 }) {
   const reduced = useReducedMotion();
   const wrap = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const el = canvas.current;
     const host = wrap.current;
-    if (!el || !host) return;
-    const ctx = el.getContext("2d");
-    if (!ctx) return;
+    if (!host) return;
 
-    let particles: P[] = [];
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: "high-performance" });
+    renderer.setClearColor(0x000000, 0);
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    host.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
+    camera.position.z = 5;
+
+    const uniforms = {
+      uSize: { value: 2.2 },
+      uDpr: { value: 1 },
+    };
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      depthTest: false,
+      uniforms,
+      vertexShader: `
+        attribute float aSize;
+        attribute vec3 aColor;
+        varying vec3 vColor;
+        varying float vAlpha;
+        uniform float uSize;
+        uniform float uDpr;
+        void main() {
+          vColor = aColor;
+          vAlpha = 0.92;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = aSize * uSize * uDpr;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vec2 uv = gl_PointCoord - 0.5;
+          float d = length(uv);
+          if (d > 0.5) discard;
+          float edge = smoothstep(0.5, 0.28, d);
+          gl_FragColor = vec4(vColor, vAlpha * edge);
+        }
+      `,
+    });
+
+    let geometry = new THREE.BufferGeometry();
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    let dots: Dot[] = [];
     let forming = false;
     let phraseI = 0;
+    let w = 1;
+    let h = 1;
+    const mouse = { x: 0, y: 0, on: false };
+    const timers: number[] = [];
     let raf = 0;
     let last = performance.now();
-    const mouse = { x: -9999, y: -9999, on: false };
-    const timers: number[] = [];
 
-    const countFor = (w: number, h: number) => Math.round(Math.min(9000, Math.max(2800, (w * h) / 58)));
-
-    const rebuild = () => {
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      const homes = scatterHomes(countFor(w, h), w, h);
-      particles = homes.map((pos) => {
-        const roll = Math.random();
-        return {
-          x: pos.x,
-          y: pos.y,
-          vx: 0,
-          vy: 0,
-          hx: pos.x,
-          hy: pos.y,
-          gx: pos.x,
-          gy: pos.y,
-          r: roll > 0.97 ? 1.7 : roll > 0.86 ? 1.05 : 0.35 + Math.random() * 0.55,
-          seed: Math.random() * Math.PI * 2,
-          glyph: false,
-        };
-      });
+    const colorsFor = (n: number, dark: boolean) => {
+      const pal = palette(dark);
+      const col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        const c = pal[i % pal.length]!;
+        col[i * 3] = c[0]!;
+        col[i * 3 + 1] = c[1]!;
+        col[i * 3 + 2] = c[2]!;
+      }
+      return col;
     };
 
-    const assignPhrase = (index: number) => {
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      const pts = shuffle(samplePhrase(PHRASES[index] ?? "", w, h));
-      particles.forEach((p) => {
-        p.glyph = false;
-        p.gx = p.hx;
-        p.gy = p.hy;
-      });
-      const order = shuffle(particles.map((_, i) => i));
-      const n = Math.min(pts.length, order.length);
+    const buildDots = (glyph: { x: number; y: number }[]) => {
+      const ambient = Math.round(Math.min(1800, Math.max(500, (w * h) / 900)));
+      const n = glyph.length + ambient;
+      const next: Dot[] = [];
       for (let i = 0; i < n; i++) {
-        const p = particles[order[i]!]!;
-        const pt = pts[i]!;
-        p.gx = pt.x;
-        p.gy = pt.y;
-        p.glyph = true;
+        const g = i < glyph.length ? glyph[i]! : null;
+        const hx = (Math.random() - 0.5) * w;
+        const hy = (Math.random() - 0.5) * h;
+        next.push({
+          x: hx,
+          y: hy,
+          vx: 0,
+          vy: 0,
+          hx,
+          hy,
+          tx: g ? g.x : hx,
+          ty: g ? g.y : hy,
+          glyph: Boolean(g),
+        });
+      }
+      return next;
+    };
+
+    const upload = () => {
+      const n = dots.length;
+      const pos = new Float32Array(n * 3);
+      const sizes = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const d = dots[i]!;
+        pos[i * 3] = d.x;
+        pos[i * 3 + 1] = d.y;
+        pos[i * 3 + 2] = 0;
+        sizes[i] = d.glyph && forming ? 2.15 : 1.15 + (i % 7 === 0 ? 0.7 : 0);
+      }
+      geometry.dispose();
+      geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+      const dark = document.documentElement.dataset.theme !== "light";
+      geometry.setAttribute("aColor", new THREE.BufferAttribute(colorsFor(n, dark), 3));
+      points.geometry = geometry;
+    };
+
+    const setPhrase = (index: number) => {
+      const glyph = samplePhrase(PHRASES[index] ?? "", w, h);
+      dots = buildDots(glyph);
+      forming = true;
+      upload();
+    };
+
+    const cloud = () => {
+      forming = false;
+      for (const d of dots) {
+        d.tx = d.hx;
+        d.ty = d.hy;
       }
     };
 
     const resize = () => {
+      w = Math.max(1, host.clientWidth);
+      h = Math.max(1, host.clientHeight);
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      el.width = Math.max(1, Math.floor(w * dpr));
-      el.height = Math.max(1, Math.floor(h * dpr));
-      el.style.width = `${w}px`;
-      el.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      rebuild();
-      if (forming) assignPhrase(phraseI);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(w, h, false);
+      camera.left = -w / 2;
+      camera.right = w / 2;
+      camera.top = h / 2;
+      camera.bottom = -h / 2;
+      camera.updateProjectionMatrix();
+      uniforms.uDpr.value = dpr;
+      uniforms.uSize.value = Math.max(1.8, Math.min(2.8, w / 520));
+      if (forming) setPhrase(phraseI);
+      else {
+        dots = buildDots([]);
+        upload();
+      }
     };
+
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(host);
 
     const cycle = () => {
-      if (reduced) return;
+      if (reduced) {
+        setPhrase(0);
+        return;
+      }
       timers.push(
         window.setTimeout(() => {
           phraseI = (phraseI + 1) % PHRASES.length;
-          assignPhrase(phraseI);
-          forming = true;
+          setPhrase(phraseI);
           timers.push(
             window.setTimeout(() => {
-              forming = false;
-              particles.forEach((p) => {
-                p.glyph = false;
-                p.gx = p.hx;
-                p.gy = p.hy;
-              });
+              cloud();
               cycle();
-            }, 3800),
+            }, 4200),
           );
-        }, 1400),
+        }, 900),
       );
     };
     cycle();
 
     const onMove = (e: PointerEvent) => {
       const r = host.getBoundingClientRect();
-      mouse.x = e.clientX - r.left;
-      mouse.y = e.clientY - r.top;
+      mouse.x = e.clientX - r.left - w / 2;
+      mouse.y = -(e.clientY - r.top - h / 2);
       mouse.on = true;
     };
     const onLeave = () => {
       mouse.on = false;
-      mouse.x = -9999;
-      mouse.y = -9999;
     };
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
 
-    const R = 120;
-    const R2 = R * R;
+    const posAttr = () => geometry.getAttribute("position") as THREE.BufferAttribute;
 
     const tick = (now: number) => {
       const dt = Math.min(32, now - last) / 16.6;
       last = now;
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      ctx.clearRect(0, 0, w, h);
-
+      const attr = posAttr();
+      if (!attr) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const arr = attr.array as Float32Array;
+      const pull = forming ? 0.085 : 0.028;
+      const R = 88;
+      const R2 = R * R;
       const t = now * 0.001;
-      const flow = forming ? 0.7 : 8;
-      const pull = forming ? 0.05 : 0.024;
 
-      for (const p of particles) {
-        const wx = reduced ? 0 : Math.sin(t * 0.42 + p.seed) * flow;
-        const wy = reduced ? 0 : Math.cos(t * 0.31 + p.seed * 1.1) * flow * 0.75;
-        const tx = (forming && p.glyph ? p.gx : p.hx) + wx;
-        const ty = (forming && p.glyph ? p.gy : p.hy) + wy;
-
-        p.vx += (tx - p.x) * pull * dt;
-        p.vy += (ty - p.y) * pull * dt;
-
+      for (let i = 0; i < dots.length; i++) {
+        const d = dots[i]!;
+        const wander = forming && d.glyph ? 0.35 : 6.5;
+        const tx = d.tx + (reduced ? 0 : Math.sin(t * 0.4 + i * 0.17) * wander);
+        const ty = d.ty + (reduced ? 0 : Math.cos(t * 0.33 + i * 0.13) * wander * 0.7);
+        d.vx += (tx - d.x) * pull * dt;
+        d.vy += (ty - d.y) * pull * dt;
         if (mouse.on && !reduced) {
-          const dx = p.x - mouse.x;
-          const dy = p.y - mouse.y;
+          const dx = d.x - mouse.x;
+          const dy = d.y - mouse.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 < R2 && d2 > 0.25) {
-            const d = Math.sqrt(d2);
-            const f = (1 - d / R) ** 2 * 2.2;
-            p.vx += (dx / d) * f * dt;
-            p.vy += (dy / d) * f * dt;
+          if (d2 < R2 && d2 > 0.4) {
+            const dist = Math.sqrt(d2);
+            const f = (1 - dist / R) ** 2 * 2.4;
+            d.vx += (dx / dist) * f * dt;
+            d.vy += (dy / dist) * f * dt;
           }
         }
-
-        p.vx *= 0.9;
-        p.vy *= 0.9;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
+        d.vx *= 0.86;
+        d.vy *= 0.86;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        arr[i * 3] = d.x;
+        arr[i * 3 + 1] = d.y;
       }
-
-      const dark = document.documentElement.dataset.theme !== "light";
-      for (const p of particles) {
-        const a = p.glyph && forming ? 0.82 : dark ? 0.28 + p.r * 0.12 : 0.36 + p.r * 0.1;
-        ctx.fillStyle =
-          p.glyph && forming
-            ? dark
-              ? `rgba(246, 228, 190, ${a})`
-              : `rgba(40, 32, 20, ${a})`
-            : dark
-              ? `rgba(214, 178, 122, ${a})`
-              : `rgba(92, 72, 42, ${a})`;
-        ctx.fillRect(p.x, p.y, p.r, p.r);
-      }
-
+      attr.needsUpdate = true;
+      renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -314,6 +353,10 @@ export function AuraParticles({
       ro.disconnect();
       host.removeEventListener("pointermove", onMove);
       host.removeEventListener("pointerleave", onLeave);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      if (renderer.domElement.parentNode === host) host.removeChild(renderer.domElement);
     };
   }, [reduced]);
 
@@ -328,8 +371,6 @@ export function AuraParticles({
       }}
       aria-label={onClick ? "Aura — добавить на экран" : undefined}
       className={`relative block w-full overflow-hidden ${className}`}
-    >
-      <canvas ref={canvas} className="block h-full w-full" />
-    </div>
+    />
   );
 }
