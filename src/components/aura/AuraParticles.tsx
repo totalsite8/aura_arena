@@ -24,8 +24,8 @@ type P = {
 };
 
 function samplePhrase(text: string, width: number, height: number): { x: number; y: number }[] {
-  const w = Math.max(320, Math.floor(width));
-  const h = Math.max(180, Math.floor(height * 0.62));
+  const w = Math.max(360, Math.floor(width));
+  const h = Math.max(200, Math.floor(height * 0.7));
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -36,7 +36,7 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  let font = Math.min(w * 0.13, h * 0.28, 108);
+  let font = Math.min(w * 0.14, h * 0.3, 120);
   const family = '"Manrope", system-ui, sans-serif';
   const layout = (size: number) => {
     ctx.font = `600 ${size}px ${family}`;
@@ -47,7 +47,7 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   };
 
   let lines = layout(font);
-  while (font > 32) {
+  while (font > 30) {
     ctx.font = `600 ${font}px ${family}`;
     const tooWide = lines.some((ln) => ctx.measureText(ln).width > w * 0.92);
     if (!tooWide) break;
@@ -55,19 +55,30 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
     lines = layout(font);
   }
   ctx.font = `600 ${font}px ${family}`;
-  const lh = font * 1.15;
+  const lh = font * 1.12;
   const top = h / 2 - ((lines.length - 1) * lh) / 2;
   lines.forEach((ln, i) => ctx.fillText(ln, w / 2, top + i * lh));
 
-  const step = w > 900 ? 2 : 3;
   const data = ctx.getImageData(0, 0, w, h).data;
+  const cx = w / 2;
+  const cy = h / 2;
   const pts: { x: number; y: number }[] = [];
-  for (let y = 0; y < h; y += step) {
-    for (let x = 0; x < w; x += step) {
-      if ((data[(y * w + x) * 4 + 3] ?? 0) > 88) {
+
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      if ((data[(y * w + x) * 4 + 3] ?? 0) < 70) continue;
+      const nx = (x - cx) / (w * 0.5);
+      const ny = (y - cy) / (h * 0.5);
+      const dist = Math.min(1, Math.sqrt(nx * nx + ny * ny));
+      const keep = 0.12 + 0.88 * (1 - dist) ** 1.65;
+      const copies = dist < 0.18 ? 4 : dist < 0.34 ? 2 : 1;
+      for (let k = 0; k < copies; k++) {
+        if (Math.random() > keep) continue;
+        const jx = (Math.random() - 0.5) * (2.8 + dist * 4);
+        const jy = (Math.random() - 0.5) * (2.8 + dist * 4);
         pts.push({
-          x: (x / w) * width,
-          y: (y / h) * height * 0.72 + height * 0.12,
+          x: (x / w) * width + jx,
+          y: (y / h) * height * 0.78 + height * 0.1 + jy,
         });
       }
     }
@@ -77,15 +88,36 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
 
 function scatterHomes(n: number, w: number, h: number): { x: number; y: number }[] {
   const out = [];
-  const padX = 12;
-  const padY = 10;
+  const padX = 8;
+  const padY = 8;
   for (let i = 0; i < n; i++) {
-    out.push({
-      x: padX + Math.random() * Math.max(1, w - padX * 2),
-      y: padY + Math.random() * Math.max(1, h - padY * 2),
-    });
+    if (Math.random() < 0.38) {
+      const u = Math.random();
+      const v = Math.random();
+      const a = Math.PI * 2 * u;
+      const r = Math.sqrt(v) * 0.42;
+      out.push({
+        x: w * (0.5 + Math.cos(a) * r * (w / Math.max(w, h))),
+        y: h * (0.48 + Math.sin(a) * r * 0.85),
+      });
+    } else {
+      out.push({
+        x: padX + Math.random() * Math.max(1, w - padX * 2),
+        y: padY + Math.random() * Math.max(1, h - padY * 2),
+      });
+    }
   }
   return out;
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const a = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = a;
+  }
+  return arr;
 }
 
 export function AuraParticles({
@@ -107,7 +139,6 @@ export function AuraParticles({
     if (!ctx) return;
 
     let particles: P[] = [];
-    let phrasePts: { x: number; y: number }[] = [];
     let forming = false;
     let phraseI = 0;
     let raf = 0;
@@ -115,13 +146,12 @@ export function AuraParticles({
     const mouse = { x: -9999, y: -9999, on: false };
     const timers: number[] = [];
 
-    const countFor = (w: number, h: number) => Math.round(Math.min(2400, Math.max(800, (w * h) / 260)));
+    const countFor = (w: number, h: number) => Math.round(Math.min(5600, Math.max(1600, (w * h) / 95)));
 
     const rebuild = () => {
       const w = host.clientWidth;
       const h = host.clientHeight;
-      const n = countFor(w, h);
-      const homes = scatterHomes(n, w, h);
+      const homes = scatterHomes(countFor(w, h), w, h);
       particles = homes.map((pos) => {
         const roll = Math.random();
         return {
@@ -133,7 +163,7 @@ export function AuraParticles({
           hy: pos.y,
           gx: pos.x,
           gy: pos.y,
-          r: roll > 0.92 ? 1.6 + Math.random() * 0.6 : 0.45 + Math.random() * 0.7,
+          r: roll > 0.97 ? 1.7 : roll > 0.86 ? 1.05 : 0.35 + Math.random() * 0.55,
           seed: Math.random() * Math.PI * 2,
           glyph: false,
         };
@@ -143,32 +173,20 @@ export function AuraParticles({
     const assignPhrase = (index: number) => {
       const w = host.clientWidth;
       const h = host.clientHeight;
-      phrasePts = samplePhrase(PHRASES[index] ?? "", w, h);
+      const pts = shuffle(samplePhrase(PHRASES[index] ?? "", w, h));
       particles.forEach((p) => {
         p.glyph = false;
         p.gx = p.hx;
         p.gy = p.hy;
       });
-      const used = new Set<number>();
-      for (const pt of phrasePts) {
-        let best = -1;
-        let bestD = 1e12;
-        for (let i = 0; i < particles.length; i++) {
-          if (used.has(i)) continue;
-          const p = particles[i]!;
-          const d = (p.hx - pt.x) ** 2 + (p.hy - pt.y) ** 2;
-          if (d < bestD) {
-            bestD = d;
-            best = i;
-          }
-        }
-        if (best >= 0) {
-          used.add(best);
-          const p = particles[best]!;
-          p.gx = pt.x;
-          p.gy = pt.y;
-          p.glyph = true;
-        }
+      const order = shuffle(particles.map((_, i) => i));
+      const n = Math.min(pts.length, order.length);
+      for (let i = 0; i < n; i++) {
+        const p = particles[order[i]!]!;
+        const pt = pts[i]!;
+        p.gx = pt.x;
+        p.gy = pt.y;
+        p.glyph = true;
       }
     };
 
@@ -204,9 +222,9 @@ export function AuraParticles({
                 p.gy = p.hy;
               });
               cycle();
-            }, 3400),
+            }, 3800),
           );
-        }, 1600),
+        }, 1400),
       );
     };
     cycle();
@@ -225,7 +243,7 @@ export function AuraParticles({
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
 
-    const R = 108;
+    const R = 120;
     const R2 = R * R;
 
     const tick = (now: number) => {
@@ -236,14 +254,17 @@ export function AuraParticles({
       ctx.clearRect(0, 0, w, h);
 
       const t = now * 0.001;
+      const flow = forming ? 2.4 : 8;
+      const pull = forming ? 0.032 : 0.024;
+
       for (const p of particles) {
-        const wx = forming || reduced ? 0 : Math.sin(t * 0.35 + p.seed) * 5;
-        const wy = forming || reduced ? 0 : Math.cos(t * 0.28 + p.seed) * 4;
+        const wx = reduced ? 0 : Math.sin(t * 0.42 + p.seed) * flow;
+        const wy = reduced ? 0 : Math.cos(t * 0.31 + p.seed * 1.1) * flow * 0.75;
         const tx = (forming && p.glyph ? p.gx : p.hx) + wx;
         const ty = (forming && p.glyph ? p.gy : p.hy) + wy;
 
-        p.vx += (tx - p.x) * 0.055 * dt;
-        p.vy += (ty - p.y) * 0.055 * dt;
+        p.vx += (tx - p.x) * pull * dt;
+        p.vy += (ty - p.y) * pull * dt;
 
         if (mouse.on && !reduced) {
           const dx = p.x - mouse.x;
@@ -251,21 +272,21 @@ export function AuraParticles({
           const d2 = dx * dx + dy * dy;
           if (d2 < R2 && d2 > 0.25) {
             const d = Math.sqrt(d2);
-            const f = (1 - d / R) ** 2 * 3.1;
+            const f = (1 - d / R) ** 2 * 2.2;
             p.vx += (dx / d) * f * dt;
             p.vy += (dy / d) * f * dt;
           }
         }
 
-        p.vx *= 0.84;
-        p.vy *= 0.84;
+        p.vx *= 0.9;
+        p.vy *= 0.9;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
       }
 
       const dark = document.documentElement.dataset.theme !== "light";
       for (const p of particles) {
-        const a = p.glyph && forming ? 0.9 : dark ? 0.4 + p.r * 0.1 : 0.5 + p.r * 0.08;
+        const a = p.glyph && forming ? 0.82 : dark ? 0.28 + p.r * 0.12 : 0.36 + p.r * 0.1;
         ctx.fillStyle =
           p.glyph && forming
             ? dark
