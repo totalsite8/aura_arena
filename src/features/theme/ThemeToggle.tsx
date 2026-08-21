@@ -18,7 +18,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     <button
       type="button"
       onClick={() => setTheme(next)}
-      className="glass inline-flex items-center gap-2 rounded-full px-3 py-2 text-[12px] font-semibold text-ink"
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-[12px] font-semibold text-ink hover:bg-bg2"
       aria-label={`Тема: ${LABEL[pref]}. Сменить`}
       title={LABEL[pref]}
     >

@@ -34,16 +34,15 @@ export function makeHistory(endPrice: number, seed: string): PricePoint[] {
   return out;
 }
 
-export function defaultChecks(seed: string, price: number, avg: number): ReliabilityCheck[] {
-  const rand = rng(`c:${seed}`);
+export function defaultChecks(reliable: boolean, price: number, avg: number): ReliabilityCheck[] {
   const cheaper = price <= avg;
   return [
-    { ok: cheaper, label: cheaper ? "Цена ниже средней за 90 дней" : "Цена чуть выше средней за 90 дней" },
-    { ok: true, label: "Продавец с высоким рейтингом" },
+    { ok: cheaper, label: cheaper ? "Цена ниже средней за 90 дней" : "Цена выше средней — смотрим не только цифру" },
+    { ok: reliable, label: reliable ? "Магазин надёжнее" : "Магазин слабее по отзывам" },
     { ok: true, label: "Много подтверждённых покупок" },
-    { ok: rand() > 0.18, label: rand() > 0.18 ? "Низкий риск серого импорта" : "Есть риск серого импорта — лучше уточнить" },
-    { ok: true, label: "Быстрая доставка" },
-    { ok: rand() > 0.1, label: "Гарантия указана" },
+    { ok: reliable, label: reliable ? "Низкий риск серого импорта" : "Есть риск серого импорта — лучше уточнить" },
+    { ok: true, label: "Доставка указана" },
+    { ok: reliable, label: reliable ? "Официальная гарантия" : "Гарантию лучше проверить" },
   ];
 }
 
@@ -60,11 +59,13 @@ export function buildProduct(
     checks?: ReliabilityCheck[];
     oldPrice?: number;
     points?: number;
+    reliable?: boolean;
   },
 ): Product {
   const price = opts.price ?? seed.price;
   const marketAverage = Math.round(seed.price * 1.04);
   const points = opts.points ?? rubToPoints(Math.round(price * 0.04));
+  const reliable = opts.reliable ?? Boolean(opts.isAuraChoice);
   return {
     id: opts.id,
     title: seed.title,
@@ -81,58 +82,53 @@ export function buildProduct(
     points,
     features: seed.features,
     whySelected: opts.why ?? [
-      "Хорошая цена относительно рынка",
-      "Высокий рейтинг",
-      "Быстрая доставка",
+      "Магазин надёжнее",
       "Официальная гарантия",
+      "Мало жалоб на брак",
+      "Если купите здесь — баллы Aura",
     ],
     priceHistory: makeHistory(price, opts.id),
     marketAverage,
-    reliabilityChecks: opts.checks ?? defaultChecks(opts.id, price, marketAverage),
+    reliabilityChecks: opts.checks ?? defaultChecks(reliable, price, marketAverage),
     isAuraChoice: Boolean(opts.isAuraChoice),
     shop: opts.shop,
+    reliable,
   };
 }
 
 export function offersFromSeed(seed: ProductSeed, key: string, count = 5): Product[] {
-  const rand = rng(`o:${key}`);
-  const shops = [...SHOPS].sort(() => rand() - 0.5);
-  const deltas = [-0.04, 0, 0.06, 0.11, 0.16, -0.07];
+  const layout: { delta: number; shop: string; aura: boolean; reliable: boolean }[] = [
+    { delta: 0.045, shop: "Яндекс Маркет", aura: true, reliable: true },
+    { delta: -0.08, shop: "Ozon", aura: false, reliable: false },
+    { delta: 0.01, shop: "DNS", aura: false, reliable: true },
+    { delta: 0.11, shop: "М.Видео", aura: false, reliable: true },
+    { delta: -0.04, shop: "Wildberries", aura: false, reliable: false },
+  ];
   const products: Product[] = [];
   for (let i = 0; i < count; i++) {
-    const shop = shops[i % shops.length] ?? "Ozon";
-    const price = Math.round(seed.price * (1 + (deltas[i] ?? 0.05 + rand() * 0.08)));
-    const isAura = i === 0;
+    const row = layout[i] ?? { delta: 0.08, shop: "Ozon", aura: false, reliable: false };
+    const price = Math.round(seed.price * (1 + row.delta));
     products.push(
       buildProduct(seed, {
         id: `${key}-${i}`,
-        shop,
+        shop: row.shop,
         price,
-        isAuraChoice: isAura,
-        rating: Math.round((4.4 + rand() * 0.5) * 10) / 10,
-        reviewsCount: Math.round(200 + rand() * 8000),
-        oldPrice: i === 2 ? Math.round(price * 1.12) : undefined,
-        why: isAura
+        isAuraChoice: row.aura,
+        reliable: row.reliable,
+        rating: row.reliable ? 4.8 : 4.4,
+        reviewsCount: row.reliable ? 3200 : 410,
+        why: row.aura
           ? [
-              "Лучшее сочетание цены, отзывов и доставки",
+              "Магазин надёжнее",
               "Официальная гарантия",
               "Мало жалоб на брак",
-              "Надёжный продавец",
+              "Есть дешевле — там выше риск серого ввоза",
+              "Если купите здесь — получите баллы Aura",
             ]
-          : [
-              "Рабочий вариант, если нужен запасной",
-              "Проверьте комплектацию перед оплатой",
-            ],
-        checks: isAura
-          ? [
-              { ok: true, label: "Цена ниже средней за 90 дней" },
-              { ok: true, label: "Продавец с высоким рейтингом" },
-              { ok: true, label: "Много подтверждённых покупок" },
-              { ok: true, label: "Низкий риск серого импорта" },
-              { ok: true, label: "Быстрая доставка" },
-              { ok: true, label: "Гарантия указана" },
-            ]
-          : defaultChecks(`${key}-${i}`, price, Math.round(seed.price * 1.04)),
+          : row.reliable
+            ? ["Нормальный запасной вариант", "Магазин знакомый"]
+            : ["Цена ниже", "Стоит проверить продавца и комплектацию"],
+        checks: defaultChecks(row.reliable, price, Math.round(seed.price * 1.04)),
       }),
     );
   }

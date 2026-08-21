@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Search, ArrowUp } from "lucide-react";
+import { ArrowUp, Search } from "lucide-react";
 import { SUGGESTIONS, TYPE_LABEL } from "@/data/queries";
 import { normalizeQuery } from "@/lib/format";
 import type { Suggestion } from "@/types";
@@ -30,6 +30,12 @@ export function SearchBar({
   useEffect(() => {
     setHi(0);
   }, [value]);
+
+  useEffect(() => {
+    const focus = () => inputRef.current?.focus();
+    window.addEventListener("aura-focus-search", focus);
+    return () => window.removeEventListener("aura-focus-search", focus);
+  }, []);
 
   const submit = (q: string) => {
     const t = q.trim();
@@ -63,11 +69,14 @@ export function SearchBar({
   return (
     <div className="relative w-full">
       <div
-        className={`glass flex items-center gap-3 rounded-full px-4 ${lg ? "h-[64px] md:h-[72px] md:px-5" : "h-12"}`}
+        className={`glass flex items-center gap-3 ${
+          lg ? "h-[64px] rounded-[22px] px-4 md:h-[70px] md:px-5" : "h-11 rounded-[16px] px-3"
+        }`}
       >
-        <Search className="shrink-0 text-mute" size={lg ? 22 : 18} />
+        <Search className="shrink-0 text-mute" size={lg ? 20 : 16} />
         <input
           ref={inputRef}
+          id="aura-search"
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => {
@@ -80,7 +89,7 @@ export function SearchBar({
           }}
           onKeyDown={onKey}
           placeholder="Что найти? Например: Honor Magic 7 Pro"
-          className={`w-full bg-transparent outline-none placeholder:text-mute ${lg ? "text-[16px] md:text-[18px]" : "text-[14px]"}`}
+          className={`w-full bg-transparent outline-none placeholder:text-mute ${lg ? "text-[16px] md:text-[17px]" : "text-[13px]"}`}
           role="combobox"
           aria-expanded={open && items.length > 0}
           aria-controls={listId}
@@ -89,10 +98,10 @@ export function SearchBar({
         <button
           type="button"
           onClick={() => submit(value)}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent text-white"
+          className="accent-btn grid h-9 w-9 shrink-0 place-items-center rounded-full"
           aria-label="Искать"
         >
-          <ArrowUp size={18} />
+          <ArrowUp size={16} />
         </button>
       </div>
 
@@ -100,7 +109,7 @@ export function SearchBar({
         <ul
           id={listId}
           role="listbox"
-          className="surface absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-3xl py-2"
+          className="glass absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-[20px] py-1"
         >
           {items.map((s, i) => (
             <li key={s.text} role="option" aria-selected={i === hi}>
@@ -108,12 +117,12 @@ export function SearchBar({
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => submit(s.text)}
-                className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-[14px] ${
+                className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-[13px] ${
                   i === hi ? "bg-bg2" : ""
                 }`}
               >
                 <span className="font-medium">{s.text}</span>
-                <span className="text-[11px] font-semibold text-mute">{TYPE_LABEL[s.type]}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mute">{TYPE_LABEL[s.type]}</span>
               </button>
             </li>
           ))}

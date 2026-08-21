@@ -44,18 +44,17 @@ export function ProductVisual({
     <div
       className={`relative overflow-hidden ${className}`}
       style={{
-        background: `linear-gradient(145deg, hsl(${hue} 32% 88%), hsl(${(hue + 40) % 360} 28% 72%), hsl(${(hue + 200) % 360} 18% 42%))`,
+        background: `radial-gradient(120% 90% at 20% 10%, hsl(${hue} 20% 22%), #0c0e14 62%)`,
       }}
       aria-hidden
     >
       <div
-        className="absolute -right-8 -top-10 h-32 w-32 rounded-full opacity-50"
-        style={{ background: `hsl(${hue} 70% 70%)` }}
+        className="absolute -right-10 top-[-30%] h-40 w-40 rounded-full opacity-40"
+        style={{ background: `hsl(${hue} 80% 55%)`, filter: "blur(18px)" }}
       />
-      <svg viewBox="0 0 100 100" className="relative h-full w-full p-4 opacity-80 mix-blend-multiply">
-        <path d={d} fill="none" stroke="rgba(28,25,21,0.55)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 100 100" className="relative h-full w-full p-5 opacity-90">
+        <path d={d} fill="none" stroke="rgba(200,240,77,0.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.28),transparent_45%)]" />
       <span className="sr-only">{title}</span>
     </div>
   );

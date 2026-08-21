@@ -12,16 +12,15 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const look: Record<BtnVariant, string> = {
-    primary:
-      "bg-accent text-white shadow-[0_8px_24px_var(--glow)] hover:brightness-105 dark:text-[#1c1915]",
+    primary: "accent-btn shadow-[0_8px_28px_var(--glow)]",
     ghost: "bg-transparent text-ink border border-line hover:bg-bg2",
-    soft: "bg-bg2 text-ink hover:bg-line/60",
-    gold: "bg-gold text-[#1c1915] hover:brightness-105",
+    soft: "bg-bg2 text-ink hover:bg-line/40",
+    gold: "accent-btn",
   };
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-[14px] font-semibold transition disabled:opacity-50 ${look[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold tracking-[-0.01em] transition disabled:opacity-50 ${look[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -49,12 +48,7 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <button
-            type="button"
-            aria-label="Закрыть"
-            className="absolute inset-0 bg-black/40"
-            onClick={onClose}
-          />
+          <button type="button" aria-label="Закрыть" className="absolute inset-0 bg-black/50" onClick={onClose} />
           <motion.div
             role="dialog"
             aria-modal
@@ -62,7 +56,7 @@ export function Modal({
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 16, opacity: 0 }}
             transition={springSnappy}
-            className={`surface relative w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-3xl p-5`}
+            className={`surface relative w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-[28px] p-5`}
           >
             <button
               type="button"
@@ -83,7 +77,7 @@ export function Modal({
 export function Chip({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-line bg-bg2 px-2.5 py-1 text-[12px] font-semibold text-ink ${className}`}
+      className={`inline-flex items-center rounded-full border border-line bg-bg2 px-2.5 py-1 text-[11px] font-semibold text-ink ${className}`}
     >
       {children}
     </span>

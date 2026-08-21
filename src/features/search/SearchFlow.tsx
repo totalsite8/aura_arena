@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { SearchBar } from "@/features/search/SearchBar";
 import { Interview } from "@/features/search/Interview";
-import { ProcessPanel } from "@/features/search/ProcessPanel";
+import { CrawlDeck, usePageCounter } from "@/features/search/CrawlDeck";
 import { ProductResults } from "@/features/product/ProductResults";
 import { GiftResults } from "@/features/gift/GiftResults";
 import { ServiceResults } from "@/features/service/ServiceResults";
@@ -26,7 +25,7 @@ function remapClarify(id: string): IntentType {
 }
 
 export function SearchFlow() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const q = params.get("q") ?? "";
   const fast = params.get("fast") === "1";
   const reduced = useReducedMotion();
@@ -38,9 +37,9 @@ export function SearchFlow() {
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>(classified0.type === "exact_product" ? "running" : "interview");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [collapsed, setCollapsed] = useState(false);
   const [payload, setPayload] = useState<DemoPayload | null>(null);
   const timers = useRef<number[]>([]);
+  const pages = usePageCounter(phase === "running" || phase === "results", fast);
 
   const questions = useMemo(() => {
     if (type === "exact_product") return [];
@@ -60,7 +59,6 @@ export function SearchFlow() {
   const startRun = (nextType: IntentType, nextAnswers: InterviewAnswers) => {
     clearTimers();
     setPhase("running");
-    setCollapsed(false);
     setActiveIndex(0);
     setPayload(null);
     const scale = timelineScale(fast, reduced);
@@ -73,7 +71,6 @@ export function SearchFlow() {
       const classified = { ...classified0, type: nextType === "unknown" ? "category_search" : nextType };
       setPayload(resolveDemo(classified, nextAnswers, city));
       setPhase("results");
-      setCollapsed(true);
       setActiveIndex(runSteps.length - 1);
     }, doneAt(runSteps) * scale);
     timers.current.push(id);
@@ -94,9 +91,9 @@ export function SearchFlow() {
       clearTimers();
       setPhase("interview");
       setActiveIndex(0);
-      setCollapsed(false);
     }
     return clearTimers;
+    // startRun is reset each query on purpose
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
@@ -118,76 +115,70 @@ export function SearchFlow() {
   const hintId = type === "gift_search" && questions[step]?.id === "who" ? guessGiftWho(q) : undefined;
 
   const optionLabel = (qid: string, oid: string) => {
-    const qq = questions.find((x) => x.id === qid) ?? interviewFor(
-      type === "exact_product" || type === "unknown" ? "category_search" : type,
-      q,
-    ).find((x) => x.id === qid);
+    const qq =
+      questions.find((x) => x.id === qid) ??
+      interviewFor(type === "exact_product" || type === "unknown" ? "category_search" : type, q).find((x) => x.id === qid);
     return qq?.options.find((o) => o.id === oid)?.label ?? oid;
   };
 
-  return (
-    <div className="mx-auto w-full max-w-[1100px] px-4 py-6">
-      <div className="mx-auto max-w-[720px]">
-        <SearchBar
-          key={q}
-          size="sm"
-          initial={q}
-          onSubmit={(next) => {
-            setParams({ q: next, ...(fast ? { fast: "1" } : {}) });
-          }}
-        />
-      </div>
+  const crawl = (
+    <CrawlDeck
+      query={q}
+      type={type}
+      steps={steps}
+      activeIndex={activeIndex}
+      fast={fast}
+      compact={phase === "results"}
+      pages={pages}
+    />
+  );
 
+  return (
+    <div className="mx-auto w-full max-w-[1440px] px-3">
       {!q.trim() && (
-        <p className="mt-10 text-center text-mute">Напишите, что нужно найти.</p>
+        <div className="tile px-6 py-16 text-center">
+          <p className="font-display text-[32px]">Напишите, что нужно</p>
+          <p className="mt-2 text-[14px] text-mute">Строка сверху всегда под рукой. Можно нажать / </p>
+        </div>
       )}
 
       {q.trim() && (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
-          <div className="lg:sticky lg:top-20 lg:self-start">
-            <ProcessPanel
-              steps={steps}
-              activeIndex={activeIndex}
-              collapsed={collapsed}
-              onToggle={() => setCollapsed((v) => !v)}
-            />
-            {Object.keys(answers).length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {Object.entries(answers).map(([k, v]) => (
-                  <Chip key={k}>{optionLabel(k, v)}</Chip>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="flex flex-col gap-3">
+          {Object.keys(answers).length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(answers).map(([k, v]) => (
+                <Chip key={k}>{optionLabel(k, v)}</Chip>
+              ))}
+            </div>
+          )}
 
-          <div>
-            {phase === "interview" && (
-              <Interview questions={questions} step={step} onPick={onPick} hintId={hintId} />
-            )}
-            {phase === "running" && (
-              <div className="surface rounded-3xl p-6">
-                <p className="font-display text-[28px]">Aura думает</p>
-                <p className="mt-2 text-[14px] text-mute">
-                  Ищу, сравниваю и проверяю. Результат появится через несколько секунд.
-                </p>
+          {phase === "interview" && <Interview questions={questions} step={step} onPick={onPick} hintId={hintId} />}
+
+          {phase === "running" && crawl}
+
+          {phase === "results" && (
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="xl:hidden">{crawl}</div>
+              <div>
+                {payload?.kind === "product" && (
+                  <ProductResults headline={payload.headline} chips={payload.chips} products={payload.products} />
+                )}
+                {payload?.kind === "gift" && (
+                  <GiftResults headline={payload.headline} chips={payload.chips} directions={payload.directions} />
+                )}
+                {payload?.kind === "service" && (
+                  <ServiceResults
+                    headline={payload.headline}
+                    chips={payload.chips}
+                    brief={payload.brief}
+                    offers={payload.offers}
+                    cautions={payload.cautions}
+                  />
+                )}
               </div>
-            )}
-            {phase === "results" && payload?.kind === "product" && (
-              <ProductResults headline={payload.headline} chips={payload.chips} products={payload.products} />
-            )}
-            {phase === "results" && payload?.kind === "gift" && (
-              <GiftResults headline={payload.headline} chips={payload.chips} directions={payload.directions} />
-            )}
-            {phase === "results" && payload?.kind === "service" && (
-              <ServiceResults
-                headline={payload.headline}
-                chips={payload.chips}
-                brief={payload.brief}
-                offers={payload.offers}
-                cautions={payload.cautions}
-              />
-            )}
-          </div>
+              <div className="hidden xl:block">{crawl}</div>
+            </div>
+          )}
         </div>
       )}
     </div>

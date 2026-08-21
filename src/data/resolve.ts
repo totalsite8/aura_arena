@@ -65,31 +65,32 @@ function budgetFromQuery(query: string): number | undefined {
   return Number(m[1].replace(/\s/g, ""));
 }
 
-function generateCategoryProducts(query: string, answers: InterviewAnswers): Product[] {
+function generateCategoryProducts(query: string): Product[] {
   const pack = findCategoryPack(query);
   if (pack) {
-    const priority = answers.priority;
-    const sorted = [...pack.items];
-    if (priority === "price") sorted.sort((a, b) => a.price - b.price);
-    if (priority === "quality") sorted.sort((a, b) => b.price - a.price);
-    return sorted.map((seed, i) =>
-      buildProduct(seed, {
+    const products = pack.items.map((seed, i) => {
+      const aura = i === 0;
+      const reliable = i !== 1;
+      return buildProduct(seed, {
         id: `cat-${seed.brand}-${i}`,
-        shop: i === 0 ? "Яндекс Маркет" : i % 2 ? "Ozon" : "Wildberries",
-        isAuraChoice: i === 0,
-        rating: 4.5 + (i === 0 ? 0.3 : 0),
+        shop: aura ? "Яндекс Маркет" : i === 1 ? "Ozon" : i % 2 ? "DNS" : "Wildberries",
+        isAuraChoice: aura,
+        reliable,
+        rating: reliable ? 4.7 : 4.3,
         reviewsCount: 400 + i * 220,
-        why:
-          i === 0
-            ? [
-                "Лучший звук в бюджете по свежим отзывам",
-                "Мало возвратов",
-                "Доставка завтра",
-                "Честный комплект в коробке",
-              ]
-            : ["Нормальный запасной вариант"],
-      }),
-    );
+        why: aura
+          ? [
+              "Магазин надёжнее",
+              "Лучший звук в бюджете по свежим отзывам",
+              "Мало возвратов",
+              "Если купите здесь — баллы Aura",
+            ]
+          : reliable
+            ? ["Нормальный запасной вариант"]
+            : ["Цена ниже — проверьте продавца"],
+      });
+    });
+    return products;
   }
 
   const q = normalizeQuery(query);
@@ -114,18 +115,13 @@ function generateCategoryProducts(query: string, answers: InterviewAnswers): Pro
     products.push(
       buildProduct(seed, {
         id: `gen-${i}`,
-        shop: i === 0 ? "Яндекс Маркет" : "Ozon",
+        shop: i === 0 ? "Яндекс Маркет" : i === 1 ? "Ozon" : "DNS",
         isAuraChoice: i === 0,
+        reliable: i !== 1,
         rating: Math.round((4.4 + rand() * 0.5) * 10) / 10,
         reviewsCount: Math.round(120 + rand() * 3000),
       }),
     );
-  }
-  if (answers.priority === "price") {
-    products.sort((a, b) => a.price - b.price);
-    products.forEach((p, i) => {
-      p.isAuraChoice = i === 0;
-    });
   }
   return products;
 }
@@ -168,7 +164,7 @@ export function resolveDemo(
       kind: "product",
       headline: "Вот спокойный выбор под ваши условия",
       chips: chipsFromAnswers(answers),
-      products: generateCategoryProducts(query, answers),
+      products: generateCategoryProducts(query),
     };
   }
 

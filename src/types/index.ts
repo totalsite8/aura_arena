@@ -65,6 +65,7 @@ export interface Product {
   reliabilityChecks: ReliabilityCheck[];
   isAuraChoice: boolean;
   shop: string;
+  reliable: boolean;
 }
 
 export interface ServiceOffer {
@@ -88,10 +89,14 @@ export interface GiftDirection {
   products: Product[];
 }
 
+export type ProcessScene = "parse" | "reviews" | "crawl" | "compare" | "verify" | "compose" | "send" | "inbox";
+
 export interface ProcessStep {
   id: string;
   text: string;
-  icon: "think" | "chat" | "news" | "search" | "scale" | "shield" | "pack" | "send" | "inbox";
+  detail: string;
+  queryHint: string;
+  scene: ProcessScene;
   delay: number;
 }
 
@@ -125,4 +130,20 @@ export interface Tx {
 export interface Suggestion {
   text: string;
   type: Exclude<IntentType, "unknown">;
+}
+
+export interface SerpRow {
+  id: string;
+  title: string;
+  url: string;
+  snippet: string;
+  meta?: string;
+}
+
+export interface CrawlSource {
+  id: string;
+  name: string;
+  host: string;
+  tint: string;
+  kind: "shop" | "web" | "maps" | "inbox";
 }
