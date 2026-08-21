@@ -1,7 +1,9 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Interview } from "@/features/search/Interview";
-import { CrawlDeck, usePageCounter } from "@/features/search/CrawlDeck";
+import { ProcessTheater, usePageCounter } from "@/features/search/ProcessTheater";
+import { JourneyStrip } from "@/features/search/JourneyStrip";
 import { ProductResults } from "@/features/product/ProductResults";
 import { GiftResults } from "@/features/gift/GiftResults";
 import { ServiceResults } from "@/features/service/ServiceResults";
@@ -9,13 +11,13 @@ import { classify } from "@/lib/classify";
 import { interviewFor, guessGiftWho } from "@/data/interviews";
 import { stepsFor, doneAt } from "@/data/process";
 import { resolveDemo, type DemoPayload } from "@/data/resolve";
-import { timelineScale } from "@/lib/motion";
+import { springSoft, timelineScale } from "@/lib/motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useAuraStore } from "@/store/useAuraStore";
 import type { IntentType, InterviewAnswers } from "@/types";
 import { Chip } from "@/components/ui";
 
-type Phase = "interview" | "running" | "results";
+type Phase = "interview" | "running" | "folding" | "results";
 
 function remapClarify(id: string): IntentType {
   if (id === "exact") return "exact_product";
@@ -39,7 +41,8 @@ export function SearchFlow() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [payload, setPayload] = useState<DemoPayload | null>(null);
   const timers = useRef<number[]>([]);
-  const pages = usePageCounter(phase === "running" || phase === "results", fast);
+  const live = phase === "running" || phase === "folding" || phase === "results";
+  const pages = usePageCounter(live, fast);
 
   const questions = useMemo(() => {
     if (type === "exact_product") return [];
@@ -64,16 +67,20 @@ export function SearchFlow() {
     const scale = timelineScale(fast, reduced);
     const runSteps = stepsFor(nextType === "unknown" ? "category_search" : nextType);
     runSteps.forEach((s, i) => {
-      const id = window.setTimeout(() => setActiveIndex(i), s.delay * scale);
-      timers.current.push(id);
+      timers.current.push(window.setTimeout(() => setActiveIndex(i), s.delay * scale));
     });
-    const id = window.setTimeout(() => {
-      const classified = { ...classified0, type: nextType === "unknown" ? "category_search" : nextType };
-      setPayload(resolveDemo(classified, nextAnswers, city));
-      setPhase("results");
-      setActiveIndex(runSteps.length - 1);
-    }, doneAt(runSteps) * scale);
-    timers.current.push(id);
+    const classified = { ...classified0, type: nextType === "unknown" ? "category_search" : nextType };
+    const data = resolveDemo(classified, nextAnswers, city);
+    timers.current.push(
+      window.setTimeout(() => {
+        setPayload(data);
+        setPhase("folding");
+        setActiveIndex(runSteps.length - 1);
+        timers.current.push(
+          window.setTimeout(() => setPhase("results"), reduced ? 80 : fast ? 220 : 780),
+        );
+      }, doneAt(runSteps) * scale),
+    );
   };
 
   useEffect(() => {
@@ -93,7 +100,6 @@ export function SearchFlow() {
       setActiveIndex(0);
     }
     return clearTimers;
-    // startRun is reset each query on purpose
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
@@ -121,63 +127,64 @@ export function SearchFlow() {
     return qq?.options.find((o) => o.id === oid)?.label ?? oid;
   };
 
-  const crawl = (
-    <CrawlDeck
-      query={q}
-      type={type}
-      steps={steps}
-      activeIndex={activeIndex}
-      fast={fast}
-      compact={phase === "results"}
-      pages={pages}
-    />
-  );
-
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-3">
+    <div className="mx-auto w-full max-w-[1440px]">
       {!q.trim() && (
-        <div className="tile px-6 py-16 text-center">
-          <p className="font-display text-[32px]">Напишите, что нужно</p>
-          <p className="mt-2 text-[14px] text-mute">Строка сверху всегда под рукой. Можно нажать / </p>
+        <div className="px-4 py-24 text-center">
+          <p className="font-display text-[40px] leading-none">Напишите, что нужно</p>
+          <p className="mt-3 text-[14px] text-mute">Строка сверху всегда под рукой. Клавиша /</p>
         </div>
       )}
 
       {q.trim() && (
         <div className="flex flex-col gap-3">
-          {Object.keys(answers).length > 0 && (
-            <div className="flex flex-wrap gap-2">
+          {Object.keys(answers).length > 0 && phase === "interview" && (
+            <div className="flex flex-wrap gap-2 px-3">
               {Object.entries(answers).map(([k, v]) => (
                 <Chip key={k}>{optionLabel(k, v)}</Chip>
               ))}
             </div>
           )}
 
-          {phase === "interview" && <Interview questions={questions} step={step} onPick={onPick} hintId={hintId} />}
-
-          {phase === "running" && crawl}
-
-          {phase === "results" && (
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="xl:hidden">{crawl}</div>
-              <div>
-                {payload?.kind === "product" && (
-                  <ProductResults headline={payload.headline} chips={payload.chips} products={payload.products} />
-                )}
-                {payload?.kind === "gift" && (
-                  <GiftResults headline={payload.headline} chips={payload.chips} directions={payload.directions} />
-                )}
-                {payload?.kind === "service" && (
-                  <ServiceResults
-                    headline={payload.headline}
-                    chips={payload.chips}
-                    brief={payload.brief}
-                    offers={payload.offers}
-                    cautions={payload.cautions}
-                  />
-                )}
-              </div>
-              <div className="hidden xl:block">{crawl}</div>
+          {phase === "interview" && (
+            <div className="px-3">
+              <Interview questions={questions} step={step} onPick={onPick} hintId={hintId} />
             </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {(phase === "running" || phase === "folding") && (
+              <ProcessTheater
+                query={q}
+                type={type}
+                steps={steps}
+                activeIndex={activeIndex}
+                fast={fast}
+                pages={pages}
+                folding={phase === "folding"}
+              />
+            )}
+          </AnimatePresence>
+
+          {phase === "results" && payload && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={springSoft} className="flex flex-col gap-3 px-3">
+              <JourneyStrip steps={steps} pages={pages} query={q} />
+              {payload.kind === "product" && (
+                <ProductResults headline={payload.headline} chips={payload.chips} products={payload.products} />
+              )}
+              {payload.kind === "gift" && (
+                <GiftResults headline={payload.headline} chips={payload.chips} directions={payload.directions} />
+              )}
+              {payload.kind === "service" && (
+                <ServiceResults
+                  headline={payload.headline}
+                  chips={payload.chips}
+                  brief={payload.brief}
+                  offers={payload.offers}
+                  cautions={payload.cautions}
+                />
+              )}
+            </motion.div>
           )}
         </div>
       )}

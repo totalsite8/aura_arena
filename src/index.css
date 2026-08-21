@@ -20,41 +20,37 @@
 
 :root,
 html[data-theme="light"] {
-  --bg: #eef0f4;
-  --bg2: #e3e6ee;
-  --card: rgba(255, 255, 255, 0.72);
-  --ink: #0c0d12;
-  --mute: #5c6170;
-  --line: rgba(12, 13, 18, 0.1);
-  --accent: #c8f04d;
-  --accent2: #3d2bff;
-  --gold: #111111;
-  --ok: #0f8a5f;
-  --bad: #c43128;
-  --glow: rgba(61, 43, 255, 0.12);
-  --shadow: 0 20px 50px rgba(16, 18, 28, 0.08);
-  --glass: rgba(255, 255, 255, 0.62);
-  --chrome: #f7f8fb;
-  --url: #eef0f5;
+  --bg: #f3f1ec;
+  --bg2: #e8e4db;
+  --card: #fffcf7;
+  --ink: #14120f;
+  --mute: #6b665c;
+  --line: rgba(20, 18, 15, 0.1);
+  --accent: #14120f;
+  --accent2: #8a6a3c;
+  --gold: #b08948;
+  --ok: #1f7a56;
+  --bad: #b42318;
+  --glow: rgba(176, 137, 72, 0.18);
+  --shadow: 0 24px 60px rgba(20, 18, 15, 0.08);
+  --glass: rgba(255, 252, 247, 0.7);
 }
 
 html[data-theme="dark"] {
-  --bg: #07080b;
-  --bg2: #101218;
-  --card: rgba(255, 255, 255, 0.035);
-  --ink: #f4f5f2;
-  --mute: #8b90a0;
+  --bg: #08080a;
+  --bg2: #121214;
+  --card: rgba(255, 255, 255, 0.04);
+  --ink: #f6f1e8;
+  --mute: #9a958c;
   --line: rgba(255, 255, 255, 0.08);
-  --accent: #c8f04d;
-  --accent2: #7af0ff;
-  --gold: #c8f04d;
-  --ok: #5dcaa0;
-  --bad: #ff6d62;
-  --glow: rgba(200, 240, 77, 0.14);
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
-  --glass: rgba(10, 12, 16, 0.62);
-  --chrome: #12151c;
-  --url: #0c0e13;
+  --accent: #f0e2c4;
+  --accent2: #d4a574;
+  --gold: #e8c9a0;
+  --ok: #7dcca8;
+  --bad: #e07a70;
+  --glow: rgba(232, 201, 160, 0.16);
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  --glass: rgba(12, 12, 14, 0.72);
 }
 
 html,
@@ -73,13 +69,12 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 40%, transparent);
-  color: #0c0d12;
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
 }
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
 }
 
 .font-mono {
@@ -88,78 +83,63 @@ body {
 
 .glass {
   background: var(--glass);
-  backdrop-filter: blur(22px) saturate(1.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
   border: 1px solid var(--line);
 }
 
 .glass-nav {
-  background: color-mix(in srgb, var(--glass) 88%, transparent);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  background: color-mix(in srgb, var(--glass) 90%, transparent);
+  backdrop-filter: blur(26px) saturate(1.3);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 
-.surface {
+.surface,
+.tile {
   background: var(--card);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 
+.tile {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
 .mesh {
   background:
-    radial-gradient(900px 520px at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
-    radial-gradient(700px 480px at 100% 100%, color-mix(in srgb, var(--accent2) 12%, transparent), transparent 50%),
+    radial-gradient(900px 520px at 50% -8%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 55%),
+    radial-gradient(640px 480px at 100% 110%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 50%),
     var(--bg);
 }
 
 .bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.tile {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  overflow: hidden;
-}
-
-.scanlines {
-  position: relative;
-}
-.scanlines::after {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0 2px,
-    rgba(0, 0, 0, 0.04) 2px 3px
-  );
-  mix-blend-mode: multiply;
-  opacity: 0.35;
-}
-
-html[data-theme="dark"] .scanlines::after {
-  mix-blend-mode: screen;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0 2px,
-    rgba(255, 255, 255, 0.025) 2px 3px
-  );
+  gap: 12px;
 }
 
 .accent-btn {
   background: var(--accent);
-  color: #0c0d12;
+  color: var(--bg);
+}
+
+html[data-theme="light"] .accent-btn {
+  color: #fffcf7;
+}
+
+html[data-theme="dark"] .accent-btn {
+  color: #14120f;
 }
 
 .accent-btn:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
+}
+
+.theater {
+  min-height: calc(100dvh - 120px);
 }
 
 ::-webkit-scrollbar {

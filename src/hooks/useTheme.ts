@@ -21,7 +21,7 @@ export function useTheme() {
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
       const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", dark ? "#07080b" : "#eef0f4");
+      if (meta) meta.setAttribute("content", dark ? "#08080a" : "#f3f1ec");
     };
     apply();
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
