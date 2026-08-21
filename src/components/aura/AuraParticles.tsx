@@ -36,10 +36,10 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  let font = Math.min(w * 0.14, h * 0.3, 120);
+  let font = Math.min(w * 0.15, h * 0.32, 128);
   const family = '"Manrope", system-ui, sans-serif';
   const layout = (size: number) => {
-    ctx.font = `600 ${size}px ${family}`;
+    ctx.font = `800 ${size}px ${family}`;
     const words = text.split(" ");
     if (ctx.measureText(text).width <= w * 0.9 || words.length === 1) return [text];
     const mid = Math.ceil(words.length / 2);
@@ -48,16 +48,23 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
 
   let lines = layout(font);
   while (font > 30) {
-    ctx.font = `600 ${font}px ${family}`;
+    ctx.font = `800 ${font}px ${family}`;
     const tooWide = lines.some((ln) => ctx.measureText(ln).width > w * 0.92);
     if (!tooWide) break;
     font -= 3;
     lines = layout(font);
   }
-  ctx.font = `600 ${font}px ${family}`;
+  ctx.font = `800 ${font}px ${family}`;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(6, font * 0.12);
+  ctx.strokeStyle = "#fff";
   const lh = font * 1.12;
   const top = h / 2 - ((lines.length - 1) * lh) / 2;
-  lines.forEach((ln, i) => ctx.fillText(ln, w / 2, top + i * lh));
+  lines.forEach((ln, i) => {
+    const yy = top + i * lh;
+    ctx.strokeText(ln, w / 2, yy);
+    ctx.fillText(ln, w / 2, yy);
+  });
 
   const data = ctx.getImageData(0, 0, w, h).data;
   const cx = w / 2;
@@ -66,19 +73,18 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
 
   for (let y = 0; y < h; y += 1) {
     for (let x = 0; x < w; x += 1) {
-      if ((data[(y * w + x) * 4 + 3] ?? 0) < 70) continue;
+      if ((data[(y * w + x) * 4 + 3] ?? 0) < 50) continue;
       const nx = (x - cx) / (w * 0.5);
       const ny = (y - cy) / (h * 0.5);
       const dist = Math.min(1, Math.sqrt(nx * nx + ny * ny));
-      const keep = 0.12 + 0.88 * (1 - dist) ** 1.65;
-      const copies = dist < 0.18 ? 4 : dist < 0.34 ? 2 : 1;
+      const keep = 0.72 + 0.28 * (1 - dist) ** 1.2;
+      const copies = dist < 0.22 ? 3 : dist < 0.4 ? 2 : 1;
       for (let k = 0; k < copies; k++) {
         if (Math.random() > keep) continue;
-        const jx = (Math.random() - 0.5) * (2.8 + dist * 4);
-        const jy = (Math.random() - 0.5) * (2.8 + dist * 4);
+        const j = 0.7 + dist * 0.6;
         pts.push({
-          x: (x / w) * width + jx,
-          y: (y / h) * height * 0.78 + height * 0.1 + jy,
+          x: (x / w) * width + (Math.random() - 0.5) * j,
+          y: (y / h) * height * 0.78 + height * 0.1 + (Math.random() - 0.5) * j,
         });
       }
     }
@@ -146,7 +152,7 @@ export function AuraParticles({
     const mouse = { x: -9999, y: -9999, on: false };
     const timers: number[] = [];
 
-    const countFor = (w: number, h: number) => Math.round(Math.min(5600, Math.max(1600, (w * h) / 95)));
+    const countFor = (w: number, h: number) => Math.round(Math.min(9000, Math.max(2800, (w * h) / 58)));
 
     const rebuild = () => {
       const w = host.clientWidth;
@@ -254,8 +260,8 @@ export function AuraParticles({
       ctx.clearRect(0, 0, w, h);
 
       const t = now * 0.001;
-      const flow = forming ? 2.4 : 8;
-      const pull = forming ? 0.032 : 0.024;
+      const flow = forming ? 0.7 : 8;
+      const pull = forming ? 0.05 : 0.024;
 
       for (const p of particles) {
         const wx = reduced ? 0 : Math.sin(t * 0.42 + p.seed) * flow;
