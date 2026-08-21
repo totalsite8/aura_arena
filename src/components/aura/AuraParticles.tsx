@@ -6,7 +6,7 @@ const PHRASES = [
   "где найти?",
   "почему так дорого?",
   "а если не оригинал?",
-  "сейчас разведут на деньги",
+  "сейчас разведут?",
   "как найти лучшее?",
 ];
 
@@ -15,16 +15,14 @@ type Dot = {
   y: number;
   vx: number;
   vy: number;
-  hx: number;
-  hy: number;
   tx: number;
   ty: number;
   glyph: boolean;
 };
 
 function samplePhrase(text: string, width: number, height: number): { x: number; y: number }[] {
-  const w = Math.max(480, Math.floor(width));
-  const h = Math.max(220, Math.floor(height * 0.82));
+  const w = Math.max(640, Math.floor(width));
+  const h = Math.max(240, Math.floor(height));
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -36,28 +34,27 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.miterLimit = 2;
 
   const family = '"Syne", "Manrope", system-ui, sans-serif';
-  let font = Math.min(w * 0.18, h * 0.42, 160);
+  let font = Math.min(w * 0.2, h * 0.48, 180);
   const layout = (size: number) => {
     ctx.font = `800 ${size}px ${family}`;
     const words = text.split(" ");
-    if (ctx.measureText(text).width <= w * 0.92 || words.length === 1) return [text];
+    if (ctx.measureText(text).width <= w * 0.9 || words.length < 3) return [text];
     const mid = Math.ceil(words.length / 2);
     return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
   };
 
   let lines = layout(font);
-  while (font > 36) {
+  while (font > 40) {
     ctx.font = `800 ${font}px ${family}`;
-    if (!lines.some((ln) => ctx.measureText(ln).width > w * 0.94)) break;
+    if (!lines.some((ln) => ctx.measureText(ln).width > w * 0.92)) break;
     font -= 2;
     lines = layout(font);
   }
   ctx.font = `800 ${font}px ${family}`;
-  ctx.lineWidth = Math.max(10, font * 0.16);
-  const lh = font * 1.05;
+  ctx.lineWidth = Math.max(14, font * 0.18);
+  const lh = font * 1.02;
   const top = h / 2 - ((lines.length - 1) * lh) / 2;
   lines.forEach((ln, i) => {
     const yy = top + i * lh;
@@ -67,13 +64,13 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
 
   const data = ctx.getImageData(0, 0, w, h).data;
   const pts: { x: number; y: number }[] = [];
-  const step = w > 1100 ? 1 : 1;
+  const step = 2;
   for (let y = 0; y < h; y += step) {
     for (let x = 0; x < w; x += step) {
-      if ((data[(y * w + x) * 4 + 3] ?? 0) < 40) continue;
+      if ((data[(y * w + x) * 4 + 3] ?? 0) < 28) continue;
       pts.push({
-        x: (x / w - 0.5) * width * 0.92,
-        y: -(y / h - 0.5) * height * 0.7,
+        x: (x / w - 0.5) * width * 0.94,
+        y: -(y / h - 0.5) * height * 0.78,
       });
     }
   }
@@ -83,20 +80,32 @@ function samplePhrase(text: string, width: number, height: number): { x: number;
 function palette(dark: boolean): [number, number, number][] {
   if (dark) {
     return [
-      [0.96, 0.89, 0.74],
-      [0.91, 0.79, 0.55],
-      [0.83, 0.64, 0.36],
-      [0.98, 0.95, 0.88],
-      [0.76, 0.42, 0.22],
+      [0.97, 0.93, 0.84],
+      [0.93, 0.82, 0.58],
+      [0.86, 0.55, 0.28],
+      [0.55, 0.78, 0.62],
+      [0.98, 0.97, 0.93],
     ];
   }
   return [
-    [0.12, 0.1, 0.08],
-    [0.22, 0.18, 0.14],
-    [0.45, 0.28, 0.12],
-    [0.35, 0.42, 0.18],
-    [0.55, 0.22, 0.12],
+    [0.1, 0.09, 0.07],
+    [0.18, 0.15, 0.12],
+    [0.55, 0.28, 0.1],
+    [0.32, 0.4, 0.16],
+    [0.08, 0.08, 0.07],
   ];
+}
+
+function paintColors(n: number, dark: boolean): Float32Array {
+  const pal = palette(dark);
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const c = pal[i % 11 === 0 ? 2 : i % 17 === 0 ? 3 : i % 5 === 0 ? 1 : 0]!;
+    col[i * 3] = c[0]!;
+    col[i * 3 + 1] = c[1]!;
+    col[i * 3 + 2] = c[2]!;
+  }
+  return col;
 }
 
 export function AuraParticles({
@@ -113,7 +122,11 @@ export function AuraParticles({
     const host = wrap.current;
     if (!host) return;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: false,
+      powerPreference: "high-performance",
+    });
     renderer.setClearColor(0x000000, 0);
     renderer.domElement.style.display = "block";
     renderer.domElement.style.width = "100%";
@@ -122,92 +135,51 @@ export function AuraParticles({
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
-    camera.position.z = 5;
+    camera.position.z = 6;
 
-    const uniforms = {
-      uSize: { value: 2.2 },
-      uDpr: { value: 1 },
-    };
+    const uniforms = { uSize: { value: 3.1 }, uDpr: { value: 1 } };
     const material = new THREE.ShaderMaterial({
       transparent: true,
+      depthWrite: false,
       depthTest: false,
       uniforms,
       vertexShader: `
         attribute float aSize;
         attribute vec3 aColor;
         varying vec3 vColor;
-        varying float vAlpha;
         uniform float uSize;
         uniform float uDpr;
         void main() {
           vColor = aColor;
-          vAlpha = 0.92;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = aSize * uSize * uDpr;
+          gl_PointSize = max(1.4, aSize * uSize * uDpr);
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
-        varying float vAlpha;
         void main() {
           vec2 uv = gl_PointCoord - 0.5;
           float d = length(uv);
-          if (d > 0.5) discard;
-          float edge = smoothstep(0.5, 0.28, d);
-          gl_FragColor = vec4(vColor, vAlpha * edge);
+          if (d > 0.48) discard;
+          float a = smoothstep(0.48, 0.18, d);
+          gl_FragColor = vec4(vColor, a);
         }
       `,
     });
 
     let geometry = new THREE.BufferGeometry();
-    const points = new THREE.Points(geometry, material);
-    scene.add(points);
+    const mesh = new THREE.Points(geometry, material);
+    scene.add(mesh);
 
     let dots: Dot[] = [];
-    let forming = false;
-    let phraseI = 0;
     let w = 1;
     let h = 1;
+    let phraseI = 0;
     const mouse = { x: 0, y: 0, on: false };
     const timers: number[] = [];
     let raf = 0;
     let last = performance.now();
-
-    const colorsFor = (n: number, dark: boolean) => {
-      const pal = palette(dark);
-      const col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const c = pal[i % pal.length]!;
-        col[i * 3] = c[0]!;
-        col[i * 3 + 1] = c[1]!;
-        col[i * 3 + 2] = c[2]!;
-      }
-      return col;
-    };
-
-    const buildDots = (glyph: { x: number; y: number }[]) => {
-      const ambient = Math.round(Math.min(1800, Math.max(500, (w * h) / 900)));
-      const n = glyph.length + ambient;
-      const next: Dot[] = [];
-      for (let i = 0; i < n; i++) {
-        const g = i < glyph.length ? glyph[i]! : null;
-        const hx = (Math.random() - 0.5) * w;
-        const hy = (Math.random() - 0.5) * h;
-        next.push({
-          x: hx,
-          y: hy,
-          vx: 0,
-          vy: 0,
-          hx,
-          hy,
-          tx: g ? g.x : hx,
-          ty: g ? g.y : hy,
-          glyph: Boolean(g),
-        });
-      }
-      return next;
-    };
 
     const upload = () => {
       const n = dots.length;
@@ -217,31 +189,49 @@ export function AuraParticles({
         const d = dots[i]!;
         pos[i * 3] = d.x;
         pos[i * 3 + 1] = d.y;
-        pos[i * 3 + 2] = 0;
-        sizes[i] = d.glyph && forming ? 2.15 : 1.15 + (i % 7 === 0 ? 0.7 : 0);
+        sizes[i] = d.glyph ? 1 : 0.62;
       }
       geometry.dispose();
       geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
       geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
       const dark = document.documentElement.dataset.theme !== "light";
-      geometry.setAttribute("aColor", new THREE.BufferAttribute(colorsFor(n, dark), 3));
-      points.geometry = geometry;
+      geometry.setAttribute("aColor", new THREE.BufferAttribute(paintColors(n, dark), 3));
+      mesh.geometry = geometry;
     };
 
-    const setPhrase = (index: number) => {
-      const glyph = samplePhrase(PHRASES[index] ?? "", w, h);
-      dots = buildDots(glyph);
-      forming = true;
+    const retarget = (glyph: { x: number; y: number }[]) => {
+      glyph.sort((a, b) => a.x - b.x || a.y - b.y);
+      const need = glyph.length;
+      while (dots.length < need) {
+        dots.push({
+          x: (Math.random() - 0.5) * w,
+          y: (Math.random() - 0.5) * h,
+          vx: 0,
+          vy: 0,
+          tx: 0,
+          ty: 0,
+          glyph: true,
+        });
+      }
+      for (let i = 0; i < dots.length; i++) {
+        const d = dots[i]!;
+        if (i < need) {
+          const g = glyph[i]!;
+          d.tx = g.x;
+          d.ty = g.y;
+          d.glyph = true;
+        } else {
+          d.glyph = false;
+          d.tx = (Math.random() - 0.5) * w * 0.96;
+          d.ty = (Math.random() - 0.5) * h * 0.92;
+        }
+      }
       upload();
     };
 
-    const cloud = () => {
-      forming = false;
-      for (const d of dots) {
-        d.tx = d.hx;
-        d.ty = d.hy;
-      }
+    const show = (index: number) => {
+      retarget(samplePhrase(PHRASES[index] ?? "", w, h));
     };
 
     const resize = () => {
@@ -256,12 +246,8 @@ export function AuraParticles({
       camera.bottom = -h / 2;
       camera.updateProjectionMatrix();
       uniforms.uDpr.value = dpr;
-      uniforms.uSize.value = Math.max(1.8, Math.min(2.8, w / 520));
-      if (forming) setPhrase(phraseI);
-      else {
-        dots = buildDots([]);
-        upload();
-      }
+      uniforms.uSize.value = Math.max(2.6, Math.min(3.6, w / 420));
+      show(phraseI);
     };
 
     resize();
@@ -269,21 +255,13 @@ export function AuraParticles({
     ro.observe(host);
 
     const cycle = () => {
-      if (reduced) {
-        setPhrase(0);
-        return;
-      }
+      if (reduced) return;
       timers.push(
         window.setTimeout(() => {
           phraseI = (phraseI + 1) % PHRASES.length;
-          setPhrase(phraseI);
-          timers.push(
-            window.setTimeout(() => {
-              cloud();
-              cycle();
-            }, 4200),
-          );
-        }, 900),
+          show(phraseI);
+          cycle();
+        }, 4800),
       );
     };
     cycle();
@@ -300,42 +278,34 @@ export function AuraParticles({
     host.addEventListener("pointermove", onMove);
     host.addEventListener("pointerleave", onLeave);
 
-    const posAttr = () => geometry.getAttribute("position") as THREE.BufferAttribute;
-
     const tick = (now: number) => {
       const dt = Math.min(32, now - last) / 16.6;
       last = now;
-      const attr = posAttr();
+      const attr = geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
       if (!attr) {
         raf = requestAnimationFrame(tick);
         return;
       }
       const arr = attr.array as Float32Array;
-      const pull = forming ? 0.085 : 0.028;
-      const R = 88;
+      const R = 72;
       const R2 = R * R;
-      const t = now * 0.001;
-
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i]!;
-        const wander = forming && d.glyph ? 0.35 : 6.5;
-        const tx = d.tx + (reduced ? 0 : Math.sin(t * 0.4 + i * 0.17) * wander);
-        const ty = d.ty + (reduced ? 0 : Math.cos(t * 0.33 + i * 0.13) * wander * 0.7);
-        d.vx += (tx - d.x) * pull * dt;
-        d.vy += (ty - d.y) * pull * dt;
+        d.vx += (d.tx - d.x) * 0.09 * dt;
+        d.vy += (d.ty - d.y) * 0.09 * dt;
         if (mouse.on && !reduced) {
           const dx = d.x - mouse.x;
           const dy = d.y - mouse.y;
           const d2 = dx * dx + dy * dy;
           if (d2 < R2 && d2 > 0.4) {
             const dist = Math.sqrt(d2);
-            const f = (1 - dist / R) ** 2 * 2.4;
+            const f = (1 - dist / R) ** 2 * 1.8;
             d.vx += (dx / dist) * f * dt;
             d.vy += (dy / dist) * f * dt;
           }
         }
-        d.vx *= 0.86;
-        d.vy *= 0.86;
+        d.vx *= 0.82;
+        d.vy *= 0.82;
         d.x += d.vx * dt;
         d.y += d.vy * dt;
         arr[i * 3] = d.x;
