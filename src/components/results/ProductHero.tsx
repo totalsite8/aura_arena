@@ -55,6 +55,7 @@ export function ProductHero({ offer, chip = 'Выбор Aura' }: { offer: Produc
     >
       <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
         <ProductImage
+          title={offer.title}
           icon={offer.icon}
           hue={offer.hue}
           className="min-h-56 lg:min-h-full"

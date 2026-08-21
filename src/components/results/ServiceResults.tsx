@@ -41,8 +41,8 @@ function BidCard({ bid, index, onChoose, chosen }: { bid: ServiceBid; index: num
     >
       <div className="flex items-start gap-3">
         <div
-          className="grid size-11 shrink-0 place-items-center rounded-2xl text-lg font-extrabold text-white"
-          style={{ background: `linear-gradient(135deg, hsl(${(bid.companyName.charCodeAt(0) * 37) % 360} 65% 55%), hsl(${((bid.companyName.charCodeAt(0) * 37) % 360) + 60} 60% 42%))` }}
+          className="grid size-11 shrink-0 place-items-center rounded-2xl text-lg font-extrabold text-white shadow-sm ring-1 ring-white/10"
+          style={{ background: `linear-gradient(135deg, hsl(${(bid.companyName.charCodeAt(0) * 37) % 360} 58% 48%), hsl(${((bid.companyName.charCodeAt(0) * 37) % 360) + 60} 55% 36%))` }}
         >
           {bid.companyName.charAt(0)}
         </div>
