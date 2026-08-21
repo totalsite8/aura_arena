@@ -1,6 +1,6 @@
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { Button, Modal } from "@/components/ui";
-import { AuraBeing } from "@/components/aura/AuraBeing";
+import { AuraParticles } from "@/components/aura/AuraParticles";
 
 export function InstallModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { canPrompt, installed, isIos, isMobile, promptInstall } = usePwaInstall();
@@ -8,7 +8,7 @@ export function InstallModal({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <Modal open={open} onClose={onClose}>
       <div className="flex flex-col items-center text-center">
-        <AuraBeing size={96} />
+        <AuraParticles className="h-[140px] w-full max-w-[280px]" />
         <h2 className="font-display mt-2 text-[26px]">Aura всегда под рукой</h2>
         <p className="mt-1 max-w-[34ch] text-[14px] text-mute">
           {installed
