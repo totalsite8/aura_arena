@@ -67,7 +67,7 @@ export function GiftResults({ payload }: { payload: GiftPayload }) {
                     }
                     className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card p-2 text-left transition-all hover:border-accent hover:shadow-[var(--glow-accent)]"
                   >
-                    <ProductImage icon={item.icon} hue={item.hue} className="size-12 shrink-0 rounded-xl" iconClassName="size-6" />
+                    <ProductImage title={item.title} icon={item.icon} hue={item.hue} className="size-12 shrink-0 rounded-xl" iconClassName="size-6" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-bold">{item.title}</span>
                       <span className="block text-xs text-muted">
