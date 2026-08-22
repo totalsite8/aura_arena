@@ -17,6 +17,7 @@ import {
   findExactSpec,
   findNiche,
 } from './catalog'
+import { budgetFromAnswer } from './questions'
 
 /* ------------------------------- утилиты ------------------------------- */
 
@@ -236,14 +237,19 @@ export function buildCategoryResult(query: string, answers: QaAnswers): { hero: 
   const icon = spec?.icon ?? 'Package'
   const criteria = spec?.criteria ?? ['высокий рейтинг', 'реальные отзывы', 'цена в бюджете']
 
-  // Бюджет из запроса («до 3 000₽») — сортируем: в бюджете выше
+  // Бюджет: сначала из самого запроса («до 3 000₽»), затем из ответа в опроснике
   const budgetMatch = normalize(query).match(/до\s*([\d\s]{3,})/)
-  const budget = budgetMatch ? parseInt(budgetMatch[1].replace(/\s/g, ''), 10) : null
+  const fromQuery = budgetMatch ? parseInt(budgetMatch[1].replace(/\s/g, ''), 10) : null
+  const fromAnswer = budgetFromAnswer(answers['budget'])
+  const budget = fromQuery ?? fromAnswer
 
   const scored = items
     .map((it, idx) => {
       let score = 100 - idx * 7 + rng.next() * 8
-      if (budget && it.price > budget) score -= 40 // вне бюджета — ниже
+      if (budget) {
+        if (it.price > budget) score -= 50 // вне бюджета — опускаем вниз
+        else score += (budget - it.price) / budget * 6 // чем доступнее в бюджете, тем выше
+      }
       return { it, score }
     })
     .sort((a, b) => b.score - a.score)
@@ -285,10 +291,11 @@ function giftKeysFromAnswers(query: string, answers: QaAnswers): string[] {
   const interest = (answers['interests'] ?? '').toLowerCase()
 
   let primary = 'tech'
-  if (interest.includes('дом') || interest.includes('уют')) primary = 'cozy'
-  else if (interest.includes('спорт')) primary = 'sport'
+  if (interest.includes('впечатл')) primary = 'impress'
+  else if (interest.includes('дом') || interest.includes('уют')) primary = 'cozy'
+  else if (interest.includes('спорт') || interest.includes('движен')) primary = 'sport'
   else if (interest.includes('красот') || interest.includes('уход')) primary = 'style'
-  else if (interest.includes('хобби')) primary = 'hobby'
+  else if (interest.includes('хобби') || interest.includes('инструм')) primary = 'hobby'
   else if (q.includes('мам') || q.includes('бабушк') || q.includes('тещ')) primary = 'cozy'
   else if (q.includes('геймер') || q.includes('программист')) primary = 'tech'
   else if (q.includes('муж') || q.includes('парн') || q.includes('брат')) primary = 'hobby'
