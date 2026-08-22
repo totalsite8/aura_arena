@@ -65,9 +65,8 @@ export function HomePage() {
               transition={{ ...SPRING, delay: 0.12 }}
               className="max-w-xl text-left text-[32px] font-extrabold leading-[1.14] tracking-tight md:max-w-2xl md:text-center md:text-5xl md:leading-[1.08]"
             >
-              Я стану твоим{' '}
-              <span className="gradient-text">лучшим помощником.</span>
-              <br className="hidden md:inline" /> Доверься.
+              Я хочу стать{' '}
+              <span className="gradient-text">твоим помощником.</span>
             </motion.h1>
 
             <motion.div
