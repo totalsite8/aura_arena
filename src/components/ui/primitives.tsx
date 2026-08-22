@@ -99,14 +99,25 @@ export function Modal({
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+
+    // Блокируем прокрутку фона, пока окно открыто
+    const { overflow: prevOverflow, paddingRight: prevPadding } = document.body.style
+    const scrollbar = window.innerWidth - document.documentElement.clientWidth
+    document.body.style.overflow = 'hidden'
+    if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`
+
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+      document.body.style.paddingRight = prevPadding
+    }
   }, [open, onClose])
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[80] grid place-items-center p-4"
+          className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -120,7 +131,7 @@ export function Modal({
             exit={{ opacity: 0, y: 18, scale: 0.98 }}
             transition={SPRING}
             className={[
-              'glass glass-hairline relative w-full rounded-[28px] p-6 shadow-2xl sm:p-8',
+              'glass glass-hairline relative my-auto max-h-[calc(100dvh-2rem)] w-full overscroll-contain overflow-y-auto rounded-[28px] p-6 shadow-2xl sm:p-8',
               wide ? 'max-w-2xl' : 'max-w-md',
             ].join(' ')}
           >
