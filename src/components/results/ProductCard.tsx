@@ -19,7 +19,7 @@ export function ProductCard({ offer, index }: { offer: ProductOffer; index: numb
       transition={{ ...SPRING, delay: index * 0.1 }}
       className="glass-card group flex flex-col overflow-hidden rounded-3xl transition-shadow hover:shadow-[var(--shadow-lift)]"
     >
-      <ProductImage icon={offer.icon} hue={offer.hue} className="h-36 sm:h-40" iconClassName="size-12 sm:size-14" />
+      <ProductImage title={offer.title} icon={offer.icon} hue={offer.hue} className="h-36 sm:h-40" iconClassName="size-12 sm:size-14" />
       <div className="flex flex-1 flex-col gap-2.5 p-4">
         <Rating value={offer.rating} reviews={offer.reviewsCount} />
         <h3 className="line-clamp-2 text-sm font-bold leading-snug">{offer.title}</h3>

@@ -36,9 +36,9 @@ export function PointsPage() {
         transition={SPRING}
         aria-label="Ваш баланс"
         className="glass-hairline relative overflow-hidden rounded-[28px] p-7 text-white sm:p-9"
-        style={{ background: 'linear-gradient(120deg, #4f3fe0 0%, #6354f0 45%, #0fbfa4 130%)' }}
+        style={{ background: 'linear-gradient(120deg, #4338ca 0%, #5b46e8 50%, #0f766e 130%)' }}
       >
-        <div className="absolute -right-10 -top-10 size-44 rounded-full bg-white/15 blur-2xl" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/25 via-transparent to-black/20" />
         <p className="text-xs font-bold uppercase tracking-wider text-white/70">Баллы Aura</p>
         <p className="mt-2 text-5xl font-extrabold tracking-tight tabular-nums sm:text-6xl">
           {balance.toLocaleString('ru-RU')}
